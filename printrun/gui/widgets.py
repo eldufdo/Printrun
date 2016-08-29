@@ -15,6 +15,10 @@
 
 import wx
 import re
+import wx.lib.wxcairo
+import cairo
+import math
+import wx.lib.agw.floatspin as FS
 
 class MacroEditor(wx.Dialog):
     """Really simple editor to edit macro definitions"""
@@ -121,6 +125,109 @@ SETTINGS_GROUPS = {"Printer": _("Printer settings"),
                    "Viewer": _("Viewer"),
                    "Colors": _("Colors"),
                    "External": _("External commands")}
+
+class AutobedlevelDialog(wx.Dialog):
+
+
+    def ScaleBitmap(self,bitmap,width,height):
+	image = wx.ImageFromBitmap(bitmap)
+	image = image.Scale(width, height, wx.IMAGE_QUALITY_HIGH)
+	result = wx.BitmapFromImage(image)
+	return result
+
+
+    def OnEraseBackground(self,event):
+	dc = event.GetDC()
+	if not dc:
+	    dc = wx.ClientDC(self)
+	    rect = self.GetUpdateRegion().GetBox()
+	    dc.SetClippingRect(rect)
+        cr = wx.lib.wxcairo.ContextFromDC(dc)
+	dc.Clear()
+	width, height = dc.GetSize()
+        # set color to black
+        cr.set_source_rgb(0, 0, 0) #black
+        # draw print bed
+        radius = min(width,height)/2 - self.offset * 4
+        cr.arc(width/2, height/2, radius, 0, 2*math.pi)
+        cr.arc(width/2, height/2, 10, 0, 2*math.pi)
+        # cr.arc(width/2, height/2, 5, 0, 2*math.pi)
+        # draw z tower
+        tower_width = self.offset + radius/3
+        tower_height = radius/5
+        cr.rectangle(width/2 - tower_width/2,height/2 - radius - tower_height - 5,tower_width,tower_height)
+        cr.stroke()
+        cr.save()
+        cr.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL,cairo.FONT_WEIGHT_BOLD)
+        cr.move_to(width/2 - 10,height/2-radius - 5 - tower_height/2+5)
+        cr.set_font_size(20)
+        cr.show_text("Z")
+        cr.restore()
+        # draw x tower
+        cr.save()
+        x_center_x = width/2-radius+radius/5;
+        x_center_y = height/2 + radius - radius/5
+        cr.translate(x_center_x, x_center_y)
+        cr.rotate(math.pi/4)
+        cr.rectangle(-tower_width/2,-tower_height/2,tower_width,tower_height)
+        cr.stroke()
+        cr.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL,cairo.FONT_WEIGHT_BOLD)
+        cr.move_to(-10,5)
+        cr.set_font_size(20)
+        cr.show_text("X")
+        cr.restore()
+        cr.stroke()
+        # draw y tower
+        cr.save()
+        y_center_x = width/2+radius-radius/5;
+        y_center_y = height/2 + radius - radius/5
+        cr.translate(y_center_x, y_center_y)
+        cr.rotate(-math.pi/4)
+        cr.rectangle(-tower_width/2,-tower_height/2,tower_width,tower_height)
+        cr.stroke()
+        cr.select_font_face("Purisa", cairo.FONT_SLANT_NORMAL,cairo.FONT_WEIGHT_BOLD)
+        cr.move_to(-10,5)
+        cr.set_font_size(20)
+        cr.show_text("Y")
+        cr.restore()
+ 
+        cr.stroke()
+        #bmp = self.ScaleBitmap(bmp,width - self.offset * 2,height - self.offset * 2)
+	#print "Dialog dim: " + str(width) + "x" + str(height)
+	#dc.DrawBitmap(bmp,self.offset,self.offset)
+	
+
+    def initFloatSpin(self):
+	self.floatSpinners = [[0 for x in range(self.probePoints)] for y in range(self.probePoints)]
+	for y in range(0,self.probePoints):
+		for x in range(0,self.probePoints):
+			self.floatSpinners[y][x] = self.createFloatSpin(x,y);
+
+    def createFloatSpin(self,x,y):
+        floatspin = FS.FloatSpin(self.panel, -1, min_val=-1000, max_val=1000,increment=0.05, value=0.0, agwStyle=FS.FS_LEFT, pos=(160 + x * self.spinner_margin,185+y*self.spinner_margin))
+        floatspin.SetFormat("%f")
+        floatspin.SetDigits(2)	
+	return floatspin
+
+    """Autobedlevel editor"""
+    def __init__(self, pronterface):
+        wx.Dialog.__init__(self, parent = None, title = _("Autobedlevel Calibration"),
+                           size = (800, 800), style = wx.DEFAULT_DIALOG_STYLE)
+        self.offset = 20
+	self.probePoints = 5
+	self.spinner_margin = 100
+        self.panel = wx.Panel(self)
+        self.panel.Bind(wx.EVT_ERASE_BACKGROUND, self.OnEraseBackground)
+	self.initFloatSpin()
+	
+
+def AutobedlevelOptions(pronterface):
+    dialog = AutobedlevelDialog(pronterface)
+    if dialog.ShowModal() == wx.ID_OK:
+        dialog.Destroy()
+
+
+
 
 class PronterOptionsDialog(wx.Dialog):
     """Options editor"""

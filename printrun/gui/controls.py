@@ -21,6 +21,8 @@ from .graph import Graph
 from .widgets import TempGauge
 from wx.lib.agw.floatspin import FloatSpin
 
+
+from .widgets import SpecialButton, MacroEditor, PronterOptions, ButtonEdit, AutobedlevelOptions
 from .utils import make_button, make_custom_button
 
 class XYZControlsSizer(wx.GridBagSizer):
@@ -68,6 +70,7 @@ def add_extra_controls(self, root, parentpanel, extra_buttons = None, mini_mode 
         "tempdisp": (tempdisp_line, 0),
         "extrude": (3, 0),
         "reverse": (3, 2),
+        "autobedlevel": (gauges_base_line+3, 0),
     }
 
     span_mapping = {
@@ -88,6 +91,7 @@ def add_extra_controls(self, root, parentpanel, extra_buttons = None, mini_mode 
         "tempdisp": (1, 5 if mini_mode else 6),
         "extrude": (1, 2),
         "reverse": (1, 3),
+        "autobedlevel": (1, 7 if root.display_graph else 6),
     }
 
     if standalone_mode:
@@ -186,6 +190,9 @@ def add_extra_controls(self, root, parentpanel, extra_buttons = None, mini_mode 
     if '(' not in root.htemp.Value:
         root.htemp.SetValue(root.htemp.Value + ' (user)')
 
+
+   
+
     # Speed control #
     speedpanel = root.newPanel(parentpanel)
     speedsizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -253,6 +260,21 @@ def add_extra_controls(self, root, parentpanel, extra_buttons = None, mini_mode 
         root.flow_setbtn.SetBackgroundColour("red")
         root.flow_spin.SetValue(value)
     root.flow_slider.Bind(wx.EVT_SCROLL, flowslider_scroll)
+    
+    # autobedlevel button #
+    autobedlevel = root.newPanel(parentpanel)
+    box = wx.BoxSizer(wx.VERTICAL)
+    autobedlevelcalib = wx.Button(autobedlevel, 0, "Autobedlevel Calibration")
+
+    def autobedlevel_pressed(event):
+        print("Autobedlevel calibration")
+        AutobedlevelOptions(self)
+
+    autobedlevelcalib.Bind(wx.EVT_BUTTON, autobedlevel_pressed)
+    box.Add(autobedlevelcalib,0,wx.EXPAND)
+    autobedlevel.SetSizer(box)
+    add("autobedlevel", autobedlevel, flag = wx.EXPAND)
+    
 
     # Temperature gauges #
 
